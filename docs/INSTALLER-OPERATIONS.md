@@ -107,9 +107,9 @@ the Techify OAuth client secret.
   environment was deployed.
 - `AUTHORIZATION_REQUIRED`: restart authorization; the state machine resumes at
   the recorded step and does not recreate completed resources.
-- `PLUGIN_RUNTIME_CREDENTIAL_REQUIRED`: open Plugins, select the package, follow
-  the account-specific Cloudflare link, and configure a token with only Workers
-  Scripts Edit for that account.
+- `PLUGIN_RUNTIME_CREDENTIAL_REQUIRED`: open Plugins, follow the automatic
+  guided dialog and its account-specific Cloudflare link, then paste the token
+  created with only Workers Scripts Edit for that account.
 - `PLUGIN_RUNTIME_CREDENTIAL_INVALID` or
   `PLUGIN_RUNTIME_CREDENTIAL_TOO_BROAD`: verify the account resource and remove
   every permission except Workers Scripts Edit before trying again.

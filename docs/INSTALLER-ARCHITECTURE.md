@@ -52,13 +52,13 @@ The OAuth client must expose only the permission groups needed to:
 - attach the explicitly reviewed Custom Domain.
 
 The initial installation does not request or create the permanent plugin
-credential. When an administrator installs the first plugin, the Core Plugins
-screen links directly to `https://dash.cloudflare.com/{accountId}/api-tokens`
-and asks for a dedicated token limited to the selected account and `Workers
-Scripts Write`. The Core validates that the token can list Workers and that D1
-and Queue calls return authorization denials, then writes it directly to its own
-`CF_API_TOKEN` Worker secret. The value is never stored in D1 or returned by the
-API. A Global API Key is never accepted.
+credential. When an administrator first opens the Core Plugins screen without
+that credential, a guided dialog opens automatically. Its account-specific
+Cloudflare template link prefills the `Nexus Edge Plugins` token name and only
+Workers Scripts Write. The Core validates that the token can list Workers and
+that D1 and Queue calls return authorization denials, then writes it directly to
+its own `CF_API_TOKEN` Worker secret. The value is never stored in D1 or returned
+by the API. A Global API Key is never accepted.
 
 ## Release integrity
 

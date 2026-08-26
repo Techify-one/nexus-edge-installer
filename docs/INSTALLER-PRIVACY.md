@@ -19,11 +19,12 @@ status, attempts, release version/hash, timestamps, the selected account ID, and
 a one-way browser-binding hash. Active state expires after one hour. Completed
 metadata expires within 24 hours. No customer business data is read from D1.
 
-The initial installer never requests the dedicated plugin token. On the first
-plugin installation, the authenticated Core interface accepts a token limited
-to one Cloudflare account and Workers Scripts Write, validates its narrow scope,
-and sends it directly to Cloudflare as the Core Worker's `CF_API_TOKEN` secret.
-The Core does not write the value to D1, logs, support reports, or API responses.
+The initial installer never requests the dedicated plugin token. When an
+administrator first opens Plugins, the authenticated Core interface guides them
+through creating a token limited to one Cloudflare account and Workers Scripts
+Write, validates its narrow scope, and sends it directly to Cloudflare as the
+Core Worker's `CF_API_TOKEN` secret. The Core does not write the value to D1,
+logs, support reports, or API responses.
 
 ## Logs and third parties
 
