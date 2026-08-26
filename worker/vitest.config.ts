@@ -10,6 +10,11 @@ export default defineConfig({
     cloudflareTest({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
+        assets: {
+          directory: "./tests/fixtures/assets",
+          binding: "ASSETS",
+          run_worker_first: true,
+        },
         bindings: {
           INSTALLER_ORIGIN: "https://installer.test",
           OAUTH_CLIENT_ID: "test-oauth-client",
