@@ -3,14 +3,16 @@ import { CloudflareApiClient, CloudflareApiError } from "./client.js";
 export type CloudflareAccount = { id: string; name: string };
 export type CloudflareZone = { id: string; name: string; status?: string };
 export type D1Database = { uuid: string; name: string };
+export type QueueConsumer = {
+  consumer_id: string;
+  script_name?: string;
+  script?: string;
+  service?: string;
+};
 export type Queue = {
   queue_id: string;
   queue_name: string;
-  consumers?: Array<{
-    consumer_id: string;
-    script?: string;
-    service?: string;
-  }>;
+  consumers?: QueueConsumer[];
 };
 export type WorkerScript = { id: string; etag?: string };
 
@@ -47,6 +49,16 @@ export async function listQueues(
 ): Promise<Queue[]> {
   return client.request<Queue[]>(
     `${accountPath(accountId)}/queues?per_page=100`,
+  );
+}
+
+export async function listQueueConsumers(
+  client: CloudflareApiClient,
+  accountId: string,
+  queueId: string,
+): Promise<QueueConsumer[]> {
+  return client.request<QueueConsumer[]>(
+    `${accountPath(accountId)}/queues/${encodeURIComponent(queueId)}/consumers`,
   );
 }
 
@@ -179,12 +191,14 @@ export async function configureSchedules(
   schedules: string[],
 ): Promise<void> {
   const path = `${accountPath(accountId)}/workers/scripts/${encodeURIComponent(workerName)}/schedules`;
-  await client.request<unknown>(path, {
+  const result = await client.request<{
+    schedules: Array<{ cron: string }>;
+  }>(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(schedules.map((cron) => ({ cron }))),
   });
-  const configured = await client.request<Array<{ cron: string }>>(path);
+  const configured = result.schedules ?? [];
   if (
     configured.length !== schedules.length ||
     schedules.some((cron) => !configured.some((item) => item.cron === cron))
@@ -199,14 +213,17 @@ export async function configureQueueConsumer(
   workerName: string,
   deadLetterQueueName: string,
 ): Promise<void> {
-  const existing = (queue.consumers ?? []).find(
+  const consumers = await listQueueConsumers(client, accountId, queue.queue_id);
+  const existing = consumers.find(
     (consumer) =>
-      consumer.script === workerName || consumer.service === workerName,
+      consumer.script_name === workerName ||
+      consumer.script === workerName ||
+      consumer.service === workerName,
   );
   const path = `${accountPath(accountId)}/queues/${encodeURIComponent(queue.queue_id)}/consumers${
     existing ? `/${encodeURIComponent(existing.consumer_id)}` : ""
   }`;
-  await client.request<unknown>(path, {
+  const configured = await client.request<QueueConsumer>(path, {
     method: existing ? "PUT" : "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -216,13 +233,10 @@ export async function configureQueueConsumer(
       settings: { batch_size: 5, max_retries: 6, max_wait_time_ms: 5_000 },
     }),
   });
-  const queues = await listQueues(client, accountId);
-  const verified = queues.find((item) => item.queue_id === queue.queue_id);
   if (
-    !(verified?.consumers ?? []).some(
-      (consumer) =>
-        consumer.script === workerName || consumer.service === workerName,
-    )
+    configured.script_name !== workerName &&
+    configured.script !== workerName &&
+    configured.service !== workerName
   )
     throw new Error("QUEUE_CONSUMER_VERIFICATION_FAILED");
 }

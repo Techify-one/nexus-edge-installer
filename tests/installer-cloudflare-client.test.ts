@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CloudflareApiClient } from "../installer/worker/src/cloudflare/client.js";
 import {
+  configureQueueConsumer,
+  configureSchedules,
   ensureAccountSubdomain,
   queryDatabase,
 } from "../installer/worker/src/cloudflare/resources.js";
@@ -146,5 +148,119 @@ describe("installer Cloudflare D1 client", () => {
     expect(JSON.parse(String(init.body))).toEqual({
       subdomain: "nexus-test-worker",
     });
+  });
+
+  it("validates schedules from the current schedule update response", async () => {
+    const accountId = "a".repeat(32);
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        success: true,
+        result: { schedules: [{ cron: "*/5 * * * *" }] },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      configureSchedules(
+        new CloudflareApiClient("oauth-token", "request-id"),
+        accountId,
+        "nexus-test-worker",
+        ["*/5 * * * *"],
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.pathname).toBe(
+      `/client/v4/accounts/${accountId}/workers/scripts/nexus-test-worker/schedules`,
+    );
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(String(init.body))).toEqual([{ cron: "*/5 * * * *" }]);
+  });
+
+  it("configures and validates a Worker queue consumer by script_name", async () => {
+    const accountId = "a".repeat(32);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ success: true, result: [] }))
+      .mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          result: {
+            consumer_id: "consumer-id",
+            script_name: "nexus-test-worker",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      configureQueueConsumer(
+        new CloudflareApiClient("oauth-token", "request-id"),
+        accountId,
+        { queue_id: "queue-id", queue_name: "nexus-test-queue" },
+        "nexus-test-worker",
+        "nexus-test-dlq",
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [listUrl, listInit] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(listUrl.pathname).toBe(
+      `/client/v4/accounts/${accountId}/queues/queue-id/consumers`,
+    );
+    expect(listInit.method).toBeUndefined();
+    const [createUrl, createInit] = fetchMock.mock.calls[1] as [
+      URL,
+      RequestInit,
+    ];
+    expect(createUrl.pathname).toBe(listUrl.pathname);
+    expect(createInit.method).toBe("POST");
+    expect(JSON.parse(String(createInit.body))).toMatchObject({
+      type: "worker",
+      script_name: "nexus-test-worker",
+      dead_letter_queue: "nexus-test-dlq",
+    });
+  });
+
+  it("updates an existing queue consumer without creating a duplicate", async () => {
+    const accountId = "a".repeat(32);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          result: [
+            {
+              consumer_id: "consumer-id",
+              script_name: "nexus-test-worker",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          result: {
+            consumer_id: "consumer-id",
+            script_name: "nexus-test-worker",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await configureQueueConsumer(
+      new CloudflareApiClient("oauth-token", "request-id"),
+      accountId,
+      { queue_id: "queue-id", queue_name: "nexus-test-queue" },
+      "nexus-test-worker",
+      "nexus-test-dlq",
+    );
+
+    const [url, init] = fetchMock.mock.calls[1] as [URL, RequestInit];
+    expect(url.pathname).toBe(
+      `/client/v4/accounts/${accountId}/queues/queue-id/consumers/consumer-id`,
+    );
+    expect(init.method).toBe("PUT");
   });
 });
