@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "@cloudflare/workers-types",
+      "@cloudflare/vitest-plugin/types",
+      "vitest/globals"
+    ]
+  },
+  "include": [
+    "../worker-configuration.d.ts",
+    "../src",
+    ".",
+    "../vitest.config.ts"
+  ]
+}

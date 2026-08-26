@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist-types",
+    "declaration": true
+  },
+  "include": ["src", "worker-configuration.d.ts"],
+  "references": [{ "path": "../../packages/installer-release-schema" }]
+}

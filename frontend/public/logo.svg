@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title description">
+  <title id="title">Nexus Edge</title>
+  <desc id="description">Nexus Edge cloud installer logo</desc>
+  <defs>
+    <linearGradient id="background" x1="18" y1="10" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172554" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="accent" x1="28" y1="30" x2="103" y2="99" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fb923c" />
+      <stop offset="1" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#background)" />
+  <path d="M31 92V36c0-5 6-8 10-4l46 45V36a9 9 0 0 1 18 0v56c0 5-6 8-10 4L49 51v41a9 9 0 0 1-18 0Z" fill="url(#accent)" />
+  <circle cx="31" cy="31" r="7" fill="#fdba74" />
+  <circle cx="97" cy="97" r="7" fill="#fb923c" />
+</svg>
