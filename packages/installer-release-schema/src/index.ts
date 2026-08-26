@@ -122,6 +122,38 @@ export type ReleaseAsset = z.infer<typeof releaseAssetSchema>;
 export type ReleaseObject = z.infer<typeof releaseObjectSchema>;
 export type StableReleasePointer = z.infer<typeof stableReleasePointerSchema>;
 
+export const workerModuleContentTypes = [
+  "application/javascript+module",
+  "application/wasm",
+  "text/plain",
+  "application/octet-stream",
+] as const;
+export type WorkerModuleContentType = (typeof workerModuleContentTypes)[number];
+const workerModuleContentTypeSet = new Set<string>(workerModuleContentTypes);
+
+export function isWorkerModuleContentType(
+  value: string,
+): value is WorkerModuleContentType {
+  return workerModuleContentTypeSet.has(value);
+}
+
+export function workerModuleContentType(
+  path: string,
+): WorkerModuleContentType | undefined {
+  const lower = path.toLowerCase();
+  if (lower.endsWith(".js") || lower.endsWith(".mjs"))
+    return "application/javascript+module";
+  if (lower.endsWith(".wasm")) return "application/wasm";
+  if (
+    lower.endsWith(".txt") ||
+    lower.endsWith(".html") ||
+    lower.endsWith(".sql")
+  )
+    return "text/plain";
+  if (lower.endsWith(".bin")) return "application/octet-stream";
+  return undefined;
+}
+
 function normalizeCanonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizeCanonical);
   if (value && typeof value === "object")

@@ -2,6 +2,7 @@ import type {
   InstallerRelease,
   ReleaseAsset,
 } from "@app/installer-release-schema";
+import { isWorkerModuleContentType } from "@app/installer-release-schema";
 import { CloudflareApiClient } from "./client.js";
 import { readVerifiedObject } from "../release/reader.js";
 
@@ -180,7 +181,16 @@ export async function uploadCoreWorker(
     new Blob([JSON.stringify(metadata)], { type: "application/json" }),
     "metadata.json",
   );
-  for (const descriptor of release.modules) {
+  // Releases produced before the module filter was introduced also contain
+  // local Vite/Wrangler JSON metadata. Those signed objects are not runtime
+  // modules and Cloudflare rejects their application/json Content-Type with
+  // error 10162, so preserve release compatibility while excluding them.
+  const deployableModules = release.modules.filter((descriptor) =>
+    isWorkerModuleContentType(descriptor.mimeType),
+  );
+  if (!deployableModules.some(({ path }) => path === release.entrypoint))
+    throw new Error("RELEASE_ENTRYPOINT_NOT_DEPLOYABLE");
+  for (const descriptor of deployableModules) {
     form.set(
       descriptor.path,
       new Blob([await readVerifiedObject(env, descriptor)], {
