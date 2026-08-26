@@ -161,6 +161,28 @@ describe("InstallationSession Durable Object", () => {
     expect(denied).toContain("Forbidden sensitive state field");
   });
 
+  it("persists official token-named statuses in the attempts map", async () => {
+    const stub = env.INSTALLATION_SESSION.getByName(crypto.randomUUID());
+    await stub.initialize(initialState());
+
+    const firstLease = await stub.beginStep("binding-hash");
+    expect(firstLease).toMatchObject({ acquired: true });
+    await stub.completeStep(
+      "binding-hash",
+      firstLease.leaseId!,
+      "runtime_token_created",
+    );
+
+    const workerUploadLease = await stub.beginStep("binding-hash");
+    expect(workerUploadLease).toMatchObject({
+      acquired: true,
+      state: {
+        status: "runtime_token_created",
+        attempts: { runtime_token_created: 1 },
+      },
+    });
+  });
+
   it("deletes expired session metadata when its alarm runs", async () => {
     const stub = env.INSTALLATION_SESSION.getByName(crypto.randomUUID());
     await stub.initialize(initialState());

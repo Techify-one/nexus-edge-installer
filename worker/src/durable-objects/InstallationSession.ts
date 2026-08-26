@@ -9,6 +9,7 @@ import type {
   InstallationStatus,
   StepLease,
 } from "../installation/types.js";
+import { installationStatuses } from "../installation/types.js";
 
 type StoredRow = { state_json: string };
 type CompletionPatch = {
@@ -20,6 +21,7 @@ type CompletionPatch = {
 
 const forbiddenStateKey =
   /(?:access|refresh|api|oauth)?_?token|secret|password|authorization|cookie|code_verifier/iu;
+const installationStatusSet = new Set<string>(installationStatuses);
 
 function assertSafeState(value: unknown, path = "state"): void {
   if (Array.isArray(value)) {
@@ -28,7 +30,9 @@ function assertSafeState(value: unknown, path = "state"): void {
   }
   if (!value || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value)) {
-    if (forbiddenStateKey.test(key) && !key.endsWith("Id"))
+    const isAttemptStatus =
+      path === "state.attempts" && installationStatusSet.has(key);
+    if (!isAttemptStatus && forbiddenStateKey.test(key) && !key.endsWith("Id"))
       throw new Error(`Forbidden sensitive state field at ${path}.${key}`);
     assertSafeState(entry, `${path}.${key}`);
   }
