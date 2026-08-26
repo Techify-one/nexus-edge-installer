@@ -142,6 +142,11 @@ export async function uploadCoreWorker(
       { type: "plain_text", name: "APP_VERSION", text: release.appVersion },
       {
         type: "plain_text",
+        name: "CORE_UPDATE_PUBLIC_KEY",
+        text: "MCowBQYDK2VwAyEAxuOKnkDa5oHc4zGhCxV6GIUU6LhZ7bStR3CgoS9adGo=",
+      },
+      {
+        type: "plain_text",
         name: "APP_INSTALLATION_ID",
         text: deployment.installationId,
       },
