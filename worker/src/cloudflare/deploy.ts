@@ -2,9 +2,13 @@ import type {
   InstallerRelease,
   ReleaseAsset,
 } from "@app/installer-release-schema";
-import { isWorkerModuleContentType } from "@app/installer-release-schema";
+import {
+  isWorkerModuleContentType,
+  staticAssetContentType,
+} from "@app/installer-release-schema";
 import { CloudflareApiClient } from "./client.js";
 import { readVerifiedObject } from "../release/reader.js";
+import { sha256Hex } from "../security/encoding.js";
 
 type AssetUploadSession = { buckets: string[][]; jwt: string };
 type WorkerUploadResult = {
@@ -26,6 +30,19 @@ function base64(bytes: Uint8Array<ArrayBuffer>): string {
   return btoa(binary);
 }
 
+export async function prepareAssetUpload(asset: ReleaseAsset): Promise<{
+  asset: ReleaseAsset;
+  contentType: string;
+  uploadHash: string;
+}> {
+  const contentType = staticAssetContentType(asset.path);
+  const uploadHash =
+    contentType === asset.mimeType
+      ? asset.uploadHash
+      : (await sha256Hex(`${asset.uploadHash}:${contentType}`)).slice(0, 32);
+  return { asset, contentType, uploadHash };
+}
+
 async function uploadAssets(
   env: Env,
   client: CloudflareApiClient,
@@ -33,11 +50,14 @@ async function uploadAssets(
   workerName: string,
   assets: ReleaseAsset[],
 ): Promise<string> {
-  const descriptors = new Map(assets.map((asset) => [asset.uploadHash, asset]));
+  const prepared = await Promise.all(assets.map(prepareAssetUpload));
+  const descriptors = new Map(
+    prepared.map((descriptor) => [descriptor.uploadHash, descriptor]),
+  );
   const manifest = Object.fromEntries(
-    assets.map((asset) => [
-      `/${asset.path}`,
-      { hash: asset.uploadHash, size: asset.size },
+    prepared.map((descriptor) => [
+      `/${descriptor.asset.path}`,
+      { hash: descriptor.uploadHash, size: descriptor.asset.size },
     ]),
   );
   const session = await client.request<AssetUploadSession>(
@@ -56,10 +76,10 @@ async function uploadAssets(
     for (const hash of bucket) {
       const descriptor = descriptors.get(hash);
       if (!descriptor) throw new Error("ASSET_UPLOAD_REQUESTED_UNKNOWN_HASH");
-      const content = await readVerifiedObject(env, descriptor);
+      const content = await readVerifiedObject(env, descriptor.asset);
       form.append(
         hash,
-        new File([base64(content)], hash, { type: descriptor.mimeType }),
+        new File([base64(content)], hash, { type: descriptor.contentType }),
         hash,
       );
     }

@@ -124,7 +124,7 @@ async function endpointReady(url: string): Promise<boolean> {
 
 async function smokeTest(
   baseUrl: string,
-  expectedVersion: string,
+  release: Awaited<ReturnType<typeof readVerifiedRelease>>["release"],
 ): Promise<void> {
   let lastCode = "SMOKE_NOT_READY";
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -138,7 +138,7 @@ async function smokeTest(
       if (
         health.ok !== true ||
         health.provider !== "d1" ||
-        health.version !== expectedVersion
+        health.version !== release.appVersion
       )
         throw new Error("SMOKE_HEALTH_UNEXPECTED");
       const setupResponse = await fetch(`${baseUrl}/api/v1/setup/status`, {
@@ -152,6 +152,25 @@ async function smokeTest(
       if (!indexResponse.ok)
         throw new Error(`SMOKE_ASSETS_HTTP_${indexResponse.status}`);
       await indexResponse.body?.cancel();
+      const javascriptAsset = release.assets.find(
+        (asset) =>
+          asset.path.toLowerCase().endsWith(".js") ||
+          asset.path.toLowerCase().endsWith(".mjs"),
+      );
+      if (!javascriptAsset) throw new Error("SMOKE_SCRIPT_ASSET_MISSING");
+      const scriptResponse = await fetch(`${baseUrl}/${javascriptAsset.path}`, {
+        redirect: "manual",
+      });
+      if (!scriptResponse.ok)
+        throw new Error(`SMOKE_SCRIPT_HTTP_${scriptResponse.status}`);
+      const contentType =
+        scriptResponse.headers.get("Content-Type")?.split(";", 1)[0] ?? "";
+      await scriptResponse.body?.cancel();
+      if (
+        contentType !== "text/javascript" &&
+        contentType !== "application/javascript"
+      )
+        throw new Error("SMOKE_SCRIPT_MIME_INVALID");
       return;
     } catch (error) {
       lastCode = error instanceof Error ? error.message : "SMOKE_NOT_READY";
@@ -440,7 +459,7 @@ export async function executeNextStep(
         state.installationId,
         releaseDatabaseSchemaVersion(release.release),
       );
-      await smokeTest(state.finalUrl!, release.release.appVersion);
+      await smokeTest(state.finalUrl!, release.release);
       state = await stub.completeStep(
         browserBindingHash,
         leaseId,

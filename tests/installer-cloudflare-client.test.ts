@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CloudflareApiClient } from "../installer/worker/src/cloudflare/client.js";
+import { prepareAssetUpload } from "../installer/worker/src/cloudflare/deploy.js";
 import {
   configureQueueConsumer,
   configureSchedules,
@@ -111,6 +112,26 @@ describe("installer Cloudflare D1 client", () => {
         expect.objectContaining({ params: [1, installationId] }),
       ],
     });
+  });
+
+  it("forces legacy JavaScript assets to upload with browser-safe MIME", async () => {
+    const legacyAsset = {
+      path: "assets/index.js",
+      objectKey: "releases/1.0.1/assets/index",
+      mimeType: "application/javascript+module",
+      size: 10,
+      sha256: "a".repeat(64),
+      uploadHash: "b".repeat(32),
+    };
+
+    const prepared = await prepareAssetUpload(legacyAsset);
+
+    expect(prepared.contentType).toBe("text/javascript");
+    expect(prepared.uploadHash).toMatch(/^[a-f0-9]{32}$/u);
+    expect(prepared.uploadHash).not.toBe(legacyAsset.uploadHash);
+    await expect(
+      prepareAssetUpload({ ...legacyAsset, mimeType: "text/javascript" }),
+    ).resolves.toMatchObject({ uploadHash: legacyAsset.uploadHash });
   });
 
   it("treats a missing workers.dev account subdomain as preflight-ready without creating it", async () => {

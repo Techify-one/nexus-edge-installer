@@ -160,6 +160,28 @@ export function workerModuleContentType(
   return undefined;
 }
 
+export function staticAssetContentType(path: string): string {
+  return (
+    {
+      ".css": "text/css; charset=utf-8",
+      ".html": "text/html; charset=utf-8",
+      ".ico": "image/x-icon",
+      ".jpeg": "image/jpeg",
+      ".jpg": "image/jpeg",
+      ".js": "text/javascript",
+      ".mjs": "text/javascript",
+      ".json": "application/json",
+      ".png": "image/png",
+      ".svg": "image/svg+xml",
+      ".txt": "text/plain; charset=utf-8",
+      ".webp": "image/webp",
+      ".woff": "font/woff",
+      ".woff2": "font/woff2",
+    }[path.slice(path.lastIndexOf(".")).toLowerCase()] ??
+    "application/octet-stream"
+  );
+}
+
 function normalizeCanonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizeCanonical);
   if (value && typeof value === "object")
