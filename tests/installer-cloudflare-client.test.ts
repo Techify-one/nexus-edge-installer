@@ -8,6 +8,10 @@ import {
 } from "../installer/worker/src/cloudflare/resources.js";
 import { runPreflight } from "../installer/worker/src/installation/preflight.js";
 import type { InstallationState } from "../installer/worker/src/installation/types.js";
+import {
+  releaseDatabaseSchemaVersion,
+  synchronizeInstallationSettings,
+} from "../installer/worker/src/installation/migrations.js";
 
 describe("installer Cloudflare D1 client", () => {
   afterEach(() => {
@@ -52,6 +56,61 @@ describe("installer Cloudflare D1 client", () => {
 
     const [, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual(query);
+  });
+
+  it("uses the logical release schema version instead of the migration count", () => {
+    expect(releaseDatabaseSchemaVersion({})).toBe(1);
+    expect(releaseDatabaseSchemaVersion({ databaseSchemaVersion: 7 })).toBe(7);
+  });
+
+  it("repairs installation settings to the release schema version", async () => {
+    const accountId = "a".repeat(32);
+    const installationId = "install_abcdefghijklmnopqrstuvwxyz";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          result: [{ success: true }, { success: true }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          result: [
+            {
+              success: true,
+              results: [
+                {
+                  installation_id: installationId,
+                  database_provider: "d1",
+                  schema_version: 1,
+                  bootstrap_state: "open",
+                },
+              ],
+            },
+          ],
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      synchronizeInstallationSettings(
+        new CloudflareApiClient("oauth-token", "request-id"),
+        accountId,
+        "database-id",
+        installationId,
+        1,
+      ),
+    ).resolves.toBeUndefined();
+
+    const [, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      batch: [
+        expect.objectContaining({ params: [installationId, 1] }),
+        expect.objectContaining({ params: [1, installationId] }),
+      ],
+    });
   });
 
   it("treats a missing workers.dev account subdomain as preflight-ready without creating it", async () => {

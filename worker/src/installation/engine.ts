@@ -20,7 +20,11 @@ import { readVerifiedRelease } from "../release/reader.js";
 import { revokeAuthorization } from "../oauth/flow.js";
 import type { SessionCapsule } from "../security/capsule.js";
 import { sanitizedMessage } from "../security/redaction.js";
-import { applyReleaseMigrations } from "./migrations.js";
+import {
+  applyReleaseMigrations,
+  releaseDatabaseSchemaVersion,
+  synchronizeInstallationSettings,
+} from "./migrations.js";
 import { resourceNames } from "./names.js";
 import { runPreflight } from "./preflight.js";
 import type { InstallationError, InstallationState } from "./types.js";
@@ -427,8 +431,15 @@ export async function executeNextStep(
         throw new Error("CUSTOM_DOMAIN_NOT_READY");
       }
     } else if (state.status === "custom_domain_attached") {
-      accessClient(capsule, requestId);
+      const client = accessClient(capsule, requestId);
       const release = await verifiedReleaseForState(env, state);
+      await synchronizeInstallationSettings(
+        client,
+        state.configuration!.accountId,
+        state.resources.databaseId!,
+        state.installationId,
+        releaseDatabaseSchemaVersion(release.release),
+      );
       await smokeTest(state.finalUrl!, release.release.appVersion);
       state = await stub.completeStep(
         browserBindingHash,

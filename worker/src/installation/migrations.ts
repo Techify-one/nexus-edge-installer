@@ -17,11 +17,57 @@ const controls = [
   )`,
 ];
 
+const legacyDatabaseSchemaVersion = 1;
+
+export function releaseDatabaseSchemaVersion(
+  release: Pick<InstallerRelease, "databaseSchemaVersion">,
+): number {
+  return release.databaseSchemaVersion ?? legacyDatabaseSchemaVersion;
+}
+
 function rows(
   result: D1QueryResult | D1QueryResult[],
 ): Array<Record<string, unknown>> {
   const entries = Array.isArray(result) ? result : [result];
   return entries.flatMap((entry) => entry.results ?? []);
+}
+
+export async function synchronizeInstallationSettings(
+  client: CloudflareApiClient,
+  accountId: string,
+  databaseId: string,
+  installationId: string,
+  schemaVersion: number,
+): Promise<void> {
+  await queryDatabase(client, accountId, databaseId, [
+    {
+      sql: `INSERT OR IGNORE INTO app_settings(
+              id, installation_id, database_provider, schema_version, bootstrap_state
+            ) VALUES ('system', ?, 'd1', ?, 'open')`,
+      params: [installationId, schemaVersion],
+    },
+    {
+      sql: `UPDATE app_settings
+            SET schema_version = ?
+            WHERE id = 'system' AND installation_id = ?
+              AND database_provider = 'd1' AND bootstrap_state = 'open'`,
+      params: [schemaVersion, installationId],
+    },
+  ]);
+
+  const verification = rows(
+    await queryDatabase(client, accountId, databaseId, {
+      sql: `SELECT installation_id, database_provider, schema_version, bootstrap_state
+       FROM app_settings WHERE id = 'system'`,
+    }),
+  )[0];
+  if (
+    verification?.installation_id !== installationId ||
+    verification.database_provider !== "d1" ||
+    verification.schema_version !== schemaVersion ||
+    verification.bootstrap_state !== "open"
+  )
+    throw new Error("SCHEMA_VERIFICATION_FAILED");
 }
 
 export async function applyReleaseMigrations(
@@ -80,37 +126,11 @@ export async function applyReleaseMigrations(
       throw new Error(`MIGRATION_FAILED:${migrationName}`);
   }
 
-  const schemaVersion = Math.max(
-    ...release.d1Migrations.map((migration) =>
-      Number(migration.id.slice(0, 4)),
-    ),
+  await synchronizeInstallationSettings(
+    client,
+    accountId,
+    databaseId,
+    installationId,
+    releaseDatabaseSchemaVersion(release),
   );
-  await queryDatabase(client, accountId, databaseId, [
-    {
-      sql: `INSERT OR IGNORE INTO app_settings(
-              id, installation_id, database_provider, schema_version, bootstrap_state
-            ) VALUES ('system', ?, 'd1', ?, 'open')`,
-      params: [installationId, schemaVersion],
-    },
-    {
-      sql: `UPDATE app_settings
-            SET schema_version = ?
-            WHERE id = 'system' AND installation_id = ? AND bootstrap_state = 'open'`,
-      params: [schemaVersion, installationId],
-    },
-  ]);
-
-  const verification = rows(
-    await queryDatabase(client, accountId, databaseId, {
-      sql: `SELECT installation_id, database_provider, schema_version, bootstrap_state
-       FROM app_settings WHERE id = 'system'`,
-    }),
-  )[0];
-  if (
-    verification?.installation_id !== installationId ||
-    verification.database_provider !== "d1" ||
-    verification.schema_version !== schemaVersion ||
-    verification.bootstrap_state !== "open"
-  )
-    throw new Error("SCHEMA_VERIFICATION_FAILED");
 }

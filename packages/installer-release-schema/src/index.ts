@@ -61,6 +61,12 @@ export const installerReleaseSchema = z
     modules: z.array(releaseObjectSchema).min(1).max(100),
     assets: z.array(releaseAssetSchema).min(1).max(20_000),
     d1Migrations: z.array(releaseMigrationSchema).min(1).max(1_000),
+    databaseSchemaVersion: z
+      .number()
+      .int()
+      .positive()
+      .max(1_000_000)
+      .optional(),
     requiredBindings: z
       .array(z.enum(["ASSETS", "DB", "WEBHOOK_QUEUE"]))
       .min(3)
