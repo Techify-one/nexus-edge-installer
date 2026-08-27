@@ -294,3 +294,19 @@ export async function verifyReleaseSignature(
     digest,
   );
 }
+
+export async function verifyReleaseSignatureWithKeys(
+  release: InstallerRelease,
+  signatureBase64: string,
+  publicKeySpkiBase64Values: string[],
+): Promise<boolean> {
+  for (const publicKey of new Set(publicKeySpkiBase64Values.filter(Boolean))) {
+    try {
+      if (await verifyReleaseSignature(release, signatureBase64, publicKey))
+        return true;
+    } catch {
+      // A malformed transitional key must not disable another configured key.
+    }
+  }
+  return false;
+}

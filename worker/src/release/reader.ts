@@ -3,7 +3,7 @@ import {
   installerReleaseSchema,
   migrationArtifactSchema,
   stableReleasePointerSchema,
-  verifyReleaseSignature,
+  verifyReleaseSignatureWithKeys,
   type InstallerRelease,
   type MigrationArtifact,
   type ReleaseObject,
@@ -81,7 +81,10 @@ export async function readVerifiedRelease(env: Env): Promise<VerifiedRelease> {
     await objectText(env.RELEASES, pointer.signatureObjectKey, 4_096)
   ).trim();
   if (
-    !(await verifyReleaseSignature(release, signature, env.RELEASE_PUBLIC_KEY))
+    !(await verifyReleaseSignatureWithKeys(release, signature, [
+      env.RELEASE_PUBLIC_KEY,
+      env.RELEASE_PUBLIC_KEY_NEXT,
+    ]))
   )
     throw new Error("RELEASE_SIGNATURE_INVALID");
   if (

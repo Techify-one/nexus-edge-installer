@@ -88,6 +88,19 @@ Never roll back customer D1 migrations automatically.
 Existing installed Nexus instances are unaffected because they do not contain
 the Techify OAuth client secret.
 
+## Release-signing key rotation
+
+1. Generate a new Ed25519 key pair and send the PKCS#8 private key directly to
+   the `installer-release-build` environment secret. Never print or commit it.
+2. Set its SPKI public key as `INSTALLER_RELEASE_PUBLIC_KEY_SPKI_BASE64` in the
+   same GitHub environment and as the Worker's temporary
+   `RELEASE_PUBLIC_KEY_NEXT` variable.
+3. Deploy the Installer before promoting the first release signed by the new
+   key. During this transition it accepts either configured public key.
+4. Publish and verify a clean-account canary through the protected workflow.
+5. In a later reviewed deployment, promote the new public key to
+   `RELEASE_PUBLIC_KEY` and remove `RELEASE_PUBLIC_KEY_NEXT`.
+
 ## Security incident
 
 1. Stop new sessions without touching installed customer Workers.
