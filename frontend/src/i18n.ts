@@ -56,7 +56,7 @@ const pt = {
   genericError: "Não foi possível concluir esta etapa.",
   d1LimitMessage: "Esta conta atingiu o limite de bancos D1 da Cloudflare.",
   d1LimitSteps:
-    "Abra o painel D1, exclua somente um banco nexus-edge de teste que você tenha certeza de que não está em uso, volte para esta aba e clique em Tentar novamente.",
+    "Abra o painel D1, exclua somente um banco nexus-edge de teste que você tenha certeza de que não está em uso, volte para esta aba e use o botão azul para continuar.",
   openD1Dashboard: "Abrir bancos D1 na Cloudflare",
   select: "Selecione",
   loading: "Carregando…",
@@ -132,7 +132,7 @@ const en: Record<TranslationKey, string> = {
   genericError: "This step could not be completed.",
   d1LimitMessage: "This account has reached its Cloudflare D1 database limit.",
   d1LimitSteps:
-    "Open the D1 dashboard, delete only an unused nexus-edge test database, return to this tab, and select Try again.",
+    "Open the D1 dashboard, delete only an unused nexus-edge test database, return to this tab, and use the blue button to continue.",
   openD1Dashboard: "Open Cloudflare D1 databases",
   select: "Select",
   loading: "Loading…",

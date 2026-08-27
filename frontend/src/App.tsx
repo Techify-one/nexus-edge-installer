@@ -295,8 +295,10 @@ export function App() {
   const currentIndex = installation
     ? statusIndex(installation.status, installation.resumeStatus)
     : -1;
-  const d1LimitReached =
-    installation?.error?.code === "D1_DATABASE_LIMIT_REACHED";
+  const d1LimitReached = [
+    "D1_DATABASE_LIMIT_REACHED",
+    "CLOUDFLARE_7406",
+  ].includes(installation?.error?.code ?? "");
   const d1DashboardUrl = installation?.configuration?.accountId
     ? `https://dash.cloudflare.com/${installation.configuration.accountId}/workers/d1`
     : "https://dash.cloudflare.com/?to=/:account/workers/d1";
