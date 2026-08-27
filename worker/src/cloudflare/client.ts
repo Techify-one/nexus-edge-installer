@@ -60,6 +60,12 @@ export class CloudflareApiError extends Error {
   }
 }
 
+export function isD1DatabaseLimitError(
+  error: unknown,
+): error is CloudflareApiError {
+  return error instanceof CloudflareApiError && error.codes.includes("7406");
+}
+
 export class CloudflareApiClient {
   constructor(
     private readonly accessToken: string,
@@ -122,6 +128,7 @@ export class CloudflareApiClient {
 export function isAuthorizationFailure(error: unknown): boolean {
   return (
     error instanceof CloudflareApiError &&
-    (error.status === 401 || error.status === 403)
+    (error.status === 401 ||
+      (error.status === 403 && !isD1DatabaseLimitError(error)))
   );
 }

@@ -3,6 +3,7 @@ import {
   CloudflareApiClient,
   CloudflareApiError,
   isAuthorizationFailure,
+  isD1DatabaseLimitError,
 } from "../cloudflare/client.js";
 import { uploadCoreWorker } from "../cloudflare/deploy.js";
 import {
@@ -51,6 +52,15 @@ function accessClient(
 }
 
 function stepError(error: unknown, requestId: string): InstallationError {
+  if (isD1DatabaseLimitError(error))
+    return {
+      code: "D1_DATABASE_LIMIT_REACHED",
+      message:
+        "This Cloudflare account has reached its D1 database limit. Delete only an unused test database, then try again.",
+      requestId,
+      retryable: true,
+      status: error.status,
+    };
   if (error instanceof CloudflareApiError)
     return {
       code: `CLOUDFLARE_${error.codes.join("_")}`.slice(0, 100),

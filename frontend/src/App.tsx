@@ -295,6 +295,11 @@ export function App() {
   const currentIndex = installation
     ? statusIndex(installation.status, installation.resumeStatus)
     : -1;
+  const d1LimitReached =
+    installation?.error?.code === "D1_DATABASE_LIMIT_REACHED";
+  const d1DashboardUrl = installation?.configuration?.accountId
+    ? `https://dash.cloudflare.com/${installation.configuration.accountId}/workers/d1`
+    : "https://dash.cloudflare.com/?to=/:account/workers/d1";
   return (
     <main className="shell">
       <header className="topbar">
@@ -615,7 +620,24 @@ export function App() {
           {installation.error && (
             <div className="alert error">
               <strong>{installation.error.code}</strong>
-              <span>{installation.error.message}</span>
+              <span>
+                {d1LimitReached
+                  ? t("d1LimitMessage")
+                  : installation.error.message}
+              </span>
+              {d1LimitReached && (
+                <>
+                  <small>{t("d1LimitSteps")}</small>
+                  <a
+                    className="button ghost alert-action"
+                    href={d1DashboardUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("openD1Dashboard")}
+                  </a>
+                </>
+              )}
               <small>
                 {t("requestId")}: {installation.error.requestId}
               </small>

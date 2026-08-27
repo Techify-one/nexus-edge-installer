@@ -433,6 +433,10 @@ legend {
 .alert small {
   word-break: break-word;
 }
+.alert .alert-action {
+  justify-self: start;
+  margin-top: 8px;
+}
 .center {
   min-height: 360px;
   display: grid;

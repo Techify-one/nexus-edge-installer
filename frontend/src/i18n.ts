@@ -54,6 +54,10 @@ const pt = {
   downloadReport: "Baixar relatório técnico",
   requestId: "Identificador de suporte",
   genericError: "Não foi possível concluir esta etapa.",
+  d1LimitMessage: "Esta conta atingiu o limite de bancos D1 da Cloudflare.",
+  d1LimitSteps:
+    "Abra o painel D1, exclua somente um banco nexus-edge de teste que você tenha certeza de que não está em uso, volte para esta aba e clique em Tentar novamente.",
+  openD1Dashboard: "Abrir bancos D1 na Cloudflare",
   select: "Selecione",
   loading: "Carregando…",
   worker: "Worker",
@@ -126,6 +130,10 @@ const en: Record<TranslationKey, string> = {
   downloadReport: "Download technical report",
   requestId: "Support identifier",
   genericError: "This step could not be completed.",
+  d1LimitMessage: "This account has reached its Cloudflare D1 database limit.",
+  d1LimitSteps:
+    "Open the D1 dashboard, delete only an unused nexus-edge test database, return to this tab, and select Try again.",
+  openD1Dashboard: "Open Cloudflare D1 databases",
   select: "Select",
   loading: "Loading…",
   worker: "Worker",
