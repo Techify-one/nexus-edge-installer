@@ -169,4 +169,142 @@ describe("installer provisioning engine", () => {
       false,
     );
   });
+
+  it("waits for a workers.dev address before running the smoke test", async () => {
+    const state: InstallationState = {
+      installationId: "install_abcdefghijklmnopqrstuvwxyz",
+      browserBindingHash: "browser-binding-hash",
+      status: "queue_consumer_configured",
+      createdAt: 1,
+      updatedAt: 1,
+      expiresAt: Date.now() + 60_000,
+      leaseId: "lease-id",
+      leaseUntil: Date.now() + 45_000,
+      configuration: {
+        accountId: "a".repeat(32),
+        accountName: "Test account",
+        displayName: "Nexus Edge",
+        addressMode: "workers_dev",
+      },
+      names: {
+        worker: "nexus-test",
+        database: "nexus-test-db",
+        queue: "nexus-test-queue",
+        deadLetterQueue: "nexus-test-dlq",
+      },
+      resources: {
+        databaseId: "database-id",
+        queueId: "queue-id",
+        deadLetterQueueId: "dlq-id",
+      },
+      finalUrl: "https://nexus-test.example.workers.dev",
+      attempts: { queue_consumer_configured: 1 },
+    };
+    const waiting: InstallationState = {
+      ...state,
+      status: "waiting_for_domain",
+    };
+    const stub = {
+      beginStep: vi.fn().mockResolvedValue({
+        acquired: true,
+        leaseId: "lease-id",
+        state,
+      }),
+      completeStep: vi.fn().mockResolvedValue(waiting),
+    };
+    const capsule: SessionCapsule = {
+      version: 1,
+      installationId: state.installationId,
+      browserBinding: "browser-binding",
+      csrfToken: "csrf-token",
+      expiresAt: Date.now() + 60_000,
+      accessToken: "temporary-oauth-access-token",
+      accessTokenExpiresAt: Date.now() + 60_000,
+    };
+
+    const result = await executeNextStep(
+      {} as Env,
+      stub as never,
+      state.browserBindingHash,
+      capsule,
+      "request-id",
+    );
+
+    expect(result.state.status).toBe("waiting_for_domain");
+    expect(result.nextDelayMs).toBe(5_000);
+    expect(stub.completeStep).toHaveBeenCalledWith(
+      state.browserBindingHash,
+      "lease-id",
+      "waiting_for_domain",
+    );
+  });
+
+  it("keeps a workers.dev installation pending while health returns 404", async () => {
+    const state: InstallationState = {
+      installationId: "install_abcdefghijklmnopqrstuvwxyz",
+      browserBindingHash: "browser-binding-hash",
+      status: "waiting_for_domain",
+      createdAt: 1,
+      updatedAt: 1,
+      expiresAt: Date.now() + 60_000,
+      leaseId: "lease-id",
+      leaseUntil: Date.now() + 45_000,
+      configuration: {
+        accountId: "a".repeat(32),
+        accountName: "Test account",
+        displayName: "Nexus Edge",
+        addressMode: "workers_dev",
+      },
+      names: {
+        worker: "nexus-test",
+        database: "nexus-test-db",
+        queue: "nexus-test-queue",
+        deadLetterQueue: "nexus-test-dlq",
+      },
+      resources: {
+        databaseId: "database-id",
+        queueId: "queue-id",
+        deadLetterQueueId: "dlq-id",
+      },
+      finalUrl: "https://nexus-test.example.workers.dev",
+      attempts: { waiting_for_domain: 1 },
+    };
+    const stub = {
+      beginStep: vi.fn().mockResolvedValue({
+        acquired: true,
+        leaseId: "lease-id",
+        state,
+      }),
+      completeStep: vi.fn().mockResolvedValue(state),
+    };
+    const capsule: SessionCapsule = {
+      version: 1,
+      installationId: state.installationId,
+      browserBinding: "browser-binding",
+      csrfToken: "csrf-token",
+      expiresAt: Date.now() + 60_000,
+      accessToken: "temporary-oauth-access-token",
+      accessTokenExpiresAt: Date.now() + 60_000,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 404 })),
+    );
+
+    const result = await executeNextStep(
+      {} as Env,
+      stub as never,
+      state.browserBindingHash,
+      capsule,
+      "request-id",
+    );
+
+    expect(result.state.status).toBe("waiting_for_domain");
+    expect(result.nextDelayMs).toBe(10_000);
+    expect(stub.completeStep).toHaveBeenCalledWith(
+      state.browserBindingHash,
+      "lease-id",
+      "waiting_for_domain",
+    );
+  });
 });

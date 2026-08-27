@@ -429,18 +429,13 @@ export async function executeNextStep(
           configuration.customHostname!,
           configuration.zoneId!,
         );
-        state = await stub.completeStep(
-          browserBindingHash,
-          leaseId,
-          "waiting_for_domain",
-        );
-        return { state, capsule, nextDelayMs: 5_000 };
       }
       state = await stub.completeStep(
         browserBindingHash,
         leaseId,
-        "custom_domain_attached",
+        "waiting_for_domain",
       );
+      return { state, capsule, nextDelayMs: 5_000 };
     } else if (state.status === "waiting_for_domain") {
       accessClient(capsule, requestId);
       if (await endpointReady(`${state.finalUrl}/health`)) {
@@ -457,7 +452,11 @@ export async function executeNextStep(
         );
         return { state, capsule, nextDelayMs: 10_000 };
       } else {
-        throw new Error("CUSTOM_DOMAIN_NOT_READY");
+        throw new Error(
+          state.configuration!.addressMode === "custom_domain"
+            ? "CUSTOM_DOMAIN_NOT_READY"
+            : "WORKERS_DEV_NOT_READY",
+        );
       }
     } else if (state.status === "custom_domain_attached") {
       const client = accessClient(capsule, requestId);
