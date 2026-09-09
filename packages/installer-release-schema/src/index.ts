@@ -67,6 +67,19 @@ export const installerReleaseSchema = z
       .positive()
       .max(1_000_000)
       .optional(),
+    pluginPlatform: z
+      .object({
+        packageFormats: z.array(z.number().int().positive()).min(1).max(10),
+        manifestVersions: z.array(z.number().int().positive()).min(1).max(10),
+        hostApis: z.array(z.number().int().positive()).min(1).max(10),
+        coreApis: z.array(z.number().int().positive()).min(1).max(10),
+        capabilities: z.record(
+          z.string().regex(/^[a-z][a-z0-9_]*$/u),
+          z.array(z.number().int().positive()).min(1).max(10),
+        ),
+      })
+      .strict()
+      .optional(),
     requiredBindings: z
       .array(z.enum(["ASSETS", "DB", "WEBHOOK_QUEUE"]))
       .min(3)
