@@ -1,7 +1,7 @@
 # Nexus Edge Installer Operations
 
 This runbook applies to the Techify-hosted installer, not to normal Core
-production deployment. Read `DEPLOYMENT.md` first. Staging and production must
+production deployment. Read [`DEPLOYMENT.md`](../DEPLOYMENT.md) first. Staging and production must
 use separate Workers, OAuth clients, Durable Object namespaces, R2 buckets,
 session keys, and release-signing environments.
 
@@ -13,7 +13,7 @@ The initial test environment is:
 - canonical origin: `https://installer.francisconeto.net.br`;
 - staging fallback: `https://nexus-edge-installer-staging.francisconeto.workers.dev` redirects to the canonical origin;
 - OAuth client: `742459137762a85c561a53db69d1d515`, public with verified publisher domain `installer.francisconeto.net.br`;
-- Wrangler file: `installer/worker/wrangler.jsonc`;
+- Wrangler file: `worker/wrangler.jsonc`;
 - private R2 bucket: `nexus-edge-releases-staging`;
 - release channel: `stable` within that staging bucket.
 
@@ -41,32 +41,21 @@ outside the repository and inject them only for the operation that needs them.
 Never put `.dev.vars`, `.env`, exported tokens, private signing keys, OAuth
 client secrets, or session keys in a build artifact or Git commit.
 
-## Publishing a signed release
+## Consuming a signed Core release
 
-Release tags run `.github/workflows/publish-installer-release.yml`. The workflow
-uses Node 24, pnpm 11.19.0, the full mandatory validation suite, and a clean
-lockfile. It builds a deterministic manifest, verifies the Ed25519 signature
-locally, and uploads immutable objects first:
+The Core repository builds, signs, and publishes immutable releases. The
+Installer reads the mutable `stable.json` pointer directly from its private R2
+binding whenever a new installation reaches release verification. It does not
+cache or hard-code a Core version.
 
-```bash
-pnpm installer:release:build
-pnpm installer:release:publish-objects
-```
-
-Promotion is a separate protected-environment job:
-
-```bash
-pnpm installer:release:promote
-```
-
-Approve promotion only after a clean-account canary installation has verified
+Core release promotion is approved only after a clean-account canary installation has verified
 D1, all migrations, Queue, DLQ, Worker/assets, Cron, consumer, `/health`,
 `/api/v1/setup/status`, `/setup`, OAuth revocation, and first-plugin installation
 through the Plugins screen with the dedicated runtime token. Confirm that the
 initial installer never requests this token. Keep the canary report and
 consent-screen capture as release evidence. `stable.json` is uploaded last.
 
-Published version prefixes are immutable. A fix gets a new semantic version.
+Published Core version prefixes are immutable. A fix gets a new semantic version.
 
 ## Rollback
 

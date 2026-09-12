@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with: { version: 11.19.0 }
+      - uses: actions/setup-node@v7
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  deploy:
+    name: Deploy test Installer
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: installer-test
+      url: https://installer.francisconeto.net.br
+    concurrency:
+      group: nexus-edge-installer-test
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with: { version: 11.19.0 }
+      - uses: actions/setup-node@v7
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm deploy
+      - name: Verify Installer
+        run: |
+          node --input-type=module <<'NODE'
+          const baseUrl = "https://installer.francisconeto.net.br";
+          const eventually = async (path) => {
+            let detail = "no response";
+            for (let attempt = 1; attempt <= 12; attempt += 1) {
+              try {
+                const response = await fetch(`${baseUrl}${path}`, {
+                  headers: { "Cache-Control": "no-cache" },
+                });
+                if (response.ok) return response.json();
+                detail = `HTTP ${response.status}`;
+              } catch (error) {
+                detail = error instanceof Error ? error.message : String(error);
+              }
+              if (attempt < 12)
+                await new Promise((resolve) => setTimeout(resolve, 5_000));
+            }
+            throw new Error(`${path} unavailable: ${detail}`);
+          };
+          const health = await eventually("/health");
+          if (!health.ok || health.service !== "nexus-edge-installer")
+            throw new Error(`Unexpected health: ${JSON.stringify(health)}`);
+          const release = await eventually("/api/releases/stable");
+          if (!release.version || !release.sourceCommit || !release.manifestHash)
+            throw new Error(`Unexpected release: ${JSON.stringify(release)}`);
+          NODE

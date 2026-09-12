@@ -1,0 +1,12 @@
+packages:
+  - packages/*
+  - frontend
+  - worker
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+onlyBuiltDependencies:
+  - esbuild
+  - workerd

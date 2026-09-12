@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-types/
+.wrangler/
+.dev.vars
+.env
+.env.*
+coverage/
+*.log
+*.local
+*.tsbuildinfo

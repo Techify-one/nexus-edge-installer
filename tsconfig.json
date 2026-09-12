@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/installer-release-schema" },
+    { "path": "./worker" },
+    { "path": "./frontend" }
+  ]
+}

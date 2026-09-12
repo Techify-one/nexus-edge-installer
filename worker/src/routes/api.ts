@@ -163,6 +163,7 @@ export const api = new Hono<InstallerHonoEnv>();
 
 api.get("/releases/stable", async (context) => {
   const verified = await readVerifiedRelease(context.env);
+  context.header("Cache-Control", "no-store");
   return context.json({
     version: verified.release.appVersion,
     sourceCommit: verified.release.sourceCommit,

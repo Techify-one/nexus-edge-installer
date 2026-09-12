@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { executeNextStep } from "../installer/worker/src/installation/engine.js";
-import type { InstallationState } from "../installer/worker/src/installation/types.js";
-import type { SessionCapsule } from "../installer/worker/src/security/capsule.js";
+import { executeNextStep } from "../worker/src/installation/engine.js";
+import type { InstallationState } from "../worker/src/installation/types.js";
+import type { SessionCapsule } from "../worker/src/security/capsule.js";
 
 describe("installer provisioning engine", () => {
   afterEach(() => {

@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CloudflareApiClient } from "../installer/worker/src/cloudflare/client.js";
-import { prepareAssetUpload } from "../installer/worker/src/cloudflare/deploy.js";
+import { CloudflareApiClient } from "../worker/src/cloudflare/client.js";
+import { prepareAssetUpload } from "../worker/src/cloudflare/deploy.js";
 import {
   configureQueueConsumer,
   configureSchedules,
   ensureAccountSubdomain,
   queryDatabase,
-} from "../installer/worker/src/cloudflare/resources.js";
-import { runPreflight } from "../installer/worker/src/installation/preflight.js";
-import type { InstallationState } from "../installer/worker/src/installation/types.js";
+} from "../worker/src/cloudflare/resources.js";
+import { runPreflight } from "../worker/src/installation/preflight.js";
+import type { InstallationState } from "../worker/src/installation/types.js";
 import {
   releaseDatabaseSchemaVersion,
   synchronizeInstallationSettings,
-} from "../installer/worker/src/installation/migrations.js";
+} from "../worker/src/installation/migrations.js";
 
 describe("installer Cloudflare D1 client", () => {
   afterEach(() => {
