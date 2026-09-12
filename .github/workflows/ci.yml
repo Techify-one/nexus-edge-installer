@@ -48,16 +48,27 @@ jobs:
       - name: Verify Installer
         run: |
           node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
           const baseUrl = "https://installer.francisconeto.net.br";
-          const eventually = async (path) => {
+          const expectedInstallerVersion = JSON.parse(
+            readFileSync("package.json", "utf8"),
+          ).version;
+          const eventually = async (path, predicate) => {
             let detail = "no response";
             for (let attempt = 1; attempt <= 12; attempt += 1) {
               try {
                 const response = await fetch(`${baseUrl}${path}`, {
                   headers: { "Cache-Control": "no-cache" },
                 });
-                if (response.ok) return response.json();
-                detail = `HTTP ${response.status}`;
+                const body = await response.text();
+                if (response.ok) {
+                  const parsed = JSON.parse(body);
+                  if (predicate(parsed)) return parsed;
+                  detail = `unexpected response: ${body}`;
+                } else {
+                  detail = `HTTP ${response.status}: ${body}`;
+                }
               } catch (error) {
                 detail = error instanceof Error ? error.message : String(error);
               }
@@ -66,10 +77,18 @@ jobs:
             }
             throw new Error(`${path} unavailable: ${detail}`);
           };
-          const health = await eventually("/health");
-          if (!health.ok || health.service !== "nexus-edge-installer")
-            throw new Error(`Unexpected health: ${JSON.stringify(health)}`);
-          const release = await eventually("/api/releases/stable");
-          if (!release.version || !release.sourceCommit || !release.manifestHash)
-            throw new Error(`Unexpected release: ${JSON.stringify(release)}`);
+          await eventually(
+            "/health",
+            (health) =>
+              health.ok === true &&
+              health.service === "nexus-edge-installer" &&
+              health.version === expectedInstallerVersion,
+          );
+          await eventually(
+            "/api/releases/stable",
+            (release) =>
+              Boolean(release.version) &&
+              Boolean(release.sourceCommit) &&
+              Boolean(release.manifestHash),
+          );
           NODE
