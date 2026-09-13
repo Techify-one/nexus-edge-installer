@@ -19,6 +19,10 @@ hashes, and pins that manifest for the duration of the installation. Core
 release production belongs to `Techify-one/nexus-edge`; this repository only
 consumes the signed distribution.
 
+New Core Workers are provisioned with the native `API_RATE_LIMITER` binding at
+600 requests per 60 seconds. This keeps request throttling out of D1's write
+path and prevents concurrent first-page loads from contending on one counter.
+
 For exceptional recovery only, use a secret-injected Cloudflare credential and
 run `pnpm deploy`. Stop on any build, deployment, health, OAuth, or release
 verification error.

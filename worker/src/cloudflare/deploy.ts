@@ -104,6 +104,13 @@ export type CoreDeployment = {
   webhookEncryptionKey: string;
 };
 
+export const CORE_RATE_LIMIT_BINDING = {
+  type: "ratelimit",
+  name: "API_RATE_LIMITER",
+  namespace_id: "729050644",
+  simple: { limit: 600, period: 60 },
+} as const;
+
 export async function uploadCoreWorker(
   env: Env,
   client: CloudflareApiClient,
@@ -139,6 +146,7 @@ export async function uploadCoreWorker(
         name: "WEBHOOK_QUEUE",
         queue_name: deployment.queueName,
       },
+      CORE_RATE_LIMIT_BINDING,
       { type: "plain_text", name: "APP_VERSION", text: release.appVersion },
       {
         type: "plain_text",
@@ -172,7 +180,7 @@ export async function uploadCoreWorker(
         text: deployment.databaseId,
       },
       { type: "plain_text", name: "WEBHOOK_ALLOWED_DOMAINS", text: "" },
-      { type: "plain_text", name: "API_RATE_LIMIT_MAX", text: "120" },
+      { type: "plain_text", name: "API_RATE_LIMIT_MAX", text: "600" },
       {
         type: "plain_text",
         name: "API_RATE_LIMIT_WINDOW_SECONDS",

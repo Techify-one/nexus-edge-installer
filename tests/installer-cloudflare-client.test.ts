@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CloudflareApiClient } from "../worker/src/cloudflare/client.js";
-import { prepareAssetUpload } from "../worker/src/cloudflare/deploy.js";
+import {
+  CORE_RATE_LIMIT_BINDING,
+  prepareAssetUpload,
+} from "../worker/src/cloudflare/deploy.js";
 import {
   configureQueueConsumer,
   configureSchedules,
@@ -17,6 +20,15 @@ import {
 describe("installer Cloudflare D1 client", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("installs Core with the native Cloudflare rate limiter", () => {
+    expect(CORE_RATE_LIMIT_BINDING).toEqual({
+      type: "ratelimit",
+      name: "API_RATE_LIMITER",
+      namespace_id: "729050644",
+      simple: { limit: 600, period: 60 },
+    });
   });
 
   it("wraps multiple D1 statements in the REST API batch property", async () => {
